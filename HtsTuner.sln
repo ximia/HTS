@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C4120978-AB79-4366-87CB-C8C54FFD7EAD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtsTuner.Core", "src\HtsTuner.Core\HtsTuner.Core.csproj", "{0E1D42A7-CF37-439C-AA62-7806EE31C421}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtsTuner.App", "src\HtsTuner.App\HtsTuner.App.csproj", "{6256832C-905A-4785-81CA-ED7BAA92CCB4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0E1D42A7-CF37-439C-AA62-7806EE31C421}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E1D42A7-CF37-439C-AA62-7806EE31C421}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E1D42A7-CF37-439C-AA62-7806EE31C421}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E1D42A7-CF37-439C-AA62-7806EE31C421}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6256832C-905A-4785-81CA-ED7BAA92CCB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6256832C-905A-4785-81CA-ED7BAA92CCB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6256832C-905A-4785-81CA-ED7BAA92CCB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6256832C-905A-4785-81CA-ED7BAA92CCB4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0E1D42A7-CF37-439C-AA62-7806EE31C421} = {C4120978-AB79-4366-87CB-C8C54FFD7EAD}
+		{6256832C-905A-4785-81CA-ED7BAA92CCB4} = {C4120978-AB79-4366-87CB-C8C54FFD7EAD}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HtsTuner.App.MainWindow"
+        Width="640" Height="480"
+        Title="HTS Tuner (Mac-native) — P28 / OBD1 Honda">
+  <DockPanel Margin="16">
+
+    <TextBlock DockPanel.Dock="Top" Text="Detected tuning hardware"
+               FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+      <Button x:Name="ScanButton" Content="Scan for hardware" Click="OnScanClick" />
+      <Button x:Name="ConnectOstrichButton" Content="Handshake Ostrich" Click="OnHandshakeOstrichClick" />
+    </StackPanel>
+
+    <ListBox DockPanel.Dock="Top" x:Name="DeviceList" Height="140" Margin="0,0,0,12" />
+
+    <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" Margin="0,0,0,4" />
+    <ScrollViewer>
+      <TextBlock x:Name="LogBox" TextWrapping="Wrap" FontFamily="monospace" />
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>
