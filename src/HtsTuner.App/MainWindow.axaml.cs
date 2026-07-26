@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -18,16 +17,28 @@ public partial class MainWindow : Window
     private RomImage? _rom;
     private RomDefinition? _definition;
 
+    // Controls resolved by name after the XAML loads. Resolving explicitly (as
+    // opposed to relying on generated x:Name fields) works whether the XAML is
+    // compiled or loaded at runtime.
+    private readonly ListBox _deviceList;
+    private readonly ListBox _tableList;
+    private readonly TextBlock _logBox;
+
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
-        DeviceList.SelectionChanged += (_, _) => _selected = DeviceList.SelectedItem as SerialDevice;
+
+        _deviceList = this.FindControl<ListBox>("DeviceList")!;
+        _tableList = this.FindControl<ListBox>("TableList")!;
+        _logBox = this.FindControl<TextBlock>("LogBox")!;
+
+        _deviceList.SelectionChanged += (_, _) => _selected = _deviceList.SelectedItem as SerialDevice;
         Log("Ready. Plug in the Ostrich and HULOG, then click \"Scan for hardware\".");
     }
 
     private void OnScanClick(object? sender, RoutedEventArgs e)
     {
-        DeviceList.Items.Clear();
+        _deviceList.Items.Clear();
         var devices = SerialDeviceScanner.Scan();
         if (devices.Count == 0)
         {
@@ -36,7 +47,7 @@ public partial class MainWindow : Window
         }
 
         foreach (var d in devices)
-            DeviceList.Items.Add(d);
+            _deviceList.Items.Add(d);
         Log($"Found {devices.Count} serial device(s).");
     }
 
@@ -99,13 +110,13 @@ public partial class MainWindow : Window
 
     private void RefreshTables()
     {
-        TableList.Items.Clear();
+        _tableList.Items.Clear();
         if (_definition is null) return;
 
         foreach (var def in _definition.Tables)
         {
             var bound = _rom is not null;
-            TableList.Items.Add($"{def.Category}/{def.Name} — {def.Columns}×{def.Rows} @ 0x{def.Address:X}"
+            _tableList.Items.Add($"{def.Category}/{def.Name} — {def.Columns}×{def.Rows} @ 0x{def.Address:X}"
                 + (bound ? "" : " (load a ROM to edit)"));
         }
     }
@@ -124,6 +135,6 @@ public partial class MainWindow : Window
     private void Log(string message)
     {
         _log.AppendLine($"[{DateTime.Now:HH:mm:ss}] {message}");
-        LogBox.Text = _log.ToString();
+        _logBox.Text = _log.ToString();
     }
 }
