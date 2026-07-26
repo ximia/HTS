@@ -52,6 +52,26 @@
             <Button x:Name="SaveRomButton" Content="Save ROM…" Click="OnSaveRomClick" />
           </StackPanel>
 
+          <Border DockPanel.Dock="Top" Background="#12141a" CornerRadius="6" Padding="8" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="Step" Foreground="#8a90a0" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="StepBox" Value="1" Increment="1" Minimum="0" Width="90" />
+              <Button Content="−" Click="OnAdjustMinus" ToolTip.Tip="Subtract step from selection" />
+              <Button Content="+" Click="OnAdjustPlus" ToolTip.Tip="Add step to selection" />
+              <Border Width="1" Background="#2a2f3a" Margin="4,2" />
+              <Button Content="−%" Click="OnScaleMinus" ToolTip.Tip="Reduce selection by step %" />
+              <Button Content="+%" Click="OnScalePlus" ToolTip.Tip="Raise selection by step %" />
+              <Border Width="1" Background="#2a2f3a" Margin="4,2" />
+              <TextBox x:Name="SetValueBox" Width="80" Watermark="value" />
+              <Button Content="Set" Click="OnSetValue" ToolTip.Tip="Set selection to value" />
+              <Border Width="1" Background="#2a2f3a" Margin="4,2" />
+              <Button Content="Interp H" Click="OnInterpH" />
+              <Button Content="Interp V" Click="OnInterpV" />
+              <Button Content="Smooth" Click="OnSmooth" />
+              <TextBlock x:Name="SelInfo" Text="" Foreground="#8a90a0" VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
+          </Border>
+
           <Border DockPanel.Dock="Left" Width="240" Background="#12141a" CornerRadius="6" Padding="6" Margin="0,0,10,0">
             <DockPanel>
               <TextBlock DockPanel.Dock="Top" Text="Tables" FontWeight="SemiBold" Foreground="#c9cede" Margin="4,4,4,8" />

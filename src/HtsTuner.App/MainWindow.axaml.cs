@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
@@ -27,7 +30,10 @@ public partial class MainWindow : Window
 
     // Tune tab
     private Table? _activeTable;
-    private TextBox[,]? _cells;
+    private Border[,]? _cellBorders;
+    private TextBlock[,]? _cellTexts;
+    private readonly HashSet<Cell> _selection = new();
+    private Cell _anchor;
     private double _tableMin, _tableMax;
 
     // Datalog tab
@@ -36,13 +42,16 @@ public partial class MainWindow : Window
     private CsvDatalogWriter? _csv;
 
     // Named controls
-    private TextBlock _statusChip = null!, _logBox = null!, _tableTitle = null!, _tableHint = null!, _logStatus = null!;
+    private TextBlock _statusChip = null!, _logBox = null!, _tableTitle = null!, _tableHint = null!,
+        _logStatus = null!, _selInfo = null!;
     private ScrollViewer _logScroller = null!;
     private ListBox _deviceList = null!, _tableList = null!;
     private Grid _tableGrid = null!;
     private WrapPanel _gaugePanel = null!;
     private CheckBox _demoCheck = null!;
     private Button _startLogButton = null!, _stopLogButton = null!;
+    private NumericUpDown _stepBox = null!;
+    private TextBox _setValueBox = null!;
 
     public MainWindow()
     {
@@ -61,6 +70,9 @@ public partial class MainWindow : Window
         _logStatus = this.FindControl<TextBlock>("LogStatus")!;
         _startLogButton = this.FindControl<Button>("StartLogButton")!;
         _stopLogButton = this.FindControl<Button>("StopLogButton")!;
+        _stepBox = this.FindControl<NumericUpDown>("StepBox")!;
+        _setValueBox = this.FindControl<TextBox>("SetValueBox")!;
+        _selInfo = this.FindControl<TextBlock>("SelInfo")!;
 
         _deviceList.SelectionChanged += (_, _) => _selected = _deviceList.SelectedItem as SerialDevice;
 
@@ -105,7 +117,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // ---------------- Tune ----------------
+    // ---------------- Tune: load / save ----------------
 
     private async void OnLoadRomClick(object? sender, RoutedEventArgs e)
     {
@@ -137,13 +149,13 @@ public partial class MainWindow : Window
     private async void OnSaveRomClick(object? sender, RoutedEventArgs e)
     {
         if (_rom is null) { Log("Load a ROM first."); return; }
-        var files = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save ROM image",
             DefaultExtension = "bin",
             SuggestedFileName = "tune.bin",
         });
-        var path = files?.TryGetLocalPath();
+        var path = file?.TryGetLocalPath();
         if (path is null) return;
         try { _rom.Save(path); Log($"Saved ROM to {path}."); }
         catch (Exception ex) { Log($"Failed to save ROM: {ex.Message}"); }
@@ -171,8 +183,11 @@ public partial class MainWindow : Window
         }
 
         _activeTable = new Table(_rom, def);
+        _selection.Clear();
         BuildTableGrid(def);
     }
+
+    // ---------------- Tune: grid ----------------
 
     private void BuildTableGrid(TableDefinition def)
     {
@@ -183,12 +198,21 @@ public partial class MainWindow : Window
         _tableGrid.Children.Clear();
         _tableGrid.RowDefinitions.Clear();
         _tableGrid.ColumnDefinitions.Clear();
-        _cells = new TextBox[def.Rows, def.Columns];
+        _cellBorders = new Border[def.Rows, def.Columns];
+        _cellTexts = new TextBlock[def.Rows, def.Columns];
 
-        for (var c = 0; c < def.Columns; c++)
+        // +1 row/col for axis headers.
+        for (var c = 0; c <= def.Columns; c++)
             _tableGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-        for (var r = 0; r < def.Rows; r++)
+        for (var r = 0; r <= def.Rows; r++)
             _tableGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+        // Column axis headers (top).
+        for (var c = 0; c < def.Columns; c++)
+            AddHeader(HeaderText(def.ColumnAxis, c), 0, c + 1);
+        // Row axis headers (left).
+        for (var r = 0; r < def.Rows; r++)
+            AddHeader(HeaderText(def.RowAxis, r), r + 1, 0);
 
         ComputeRange();
 
@@ -196,38 +220,146 @@ public partial class MainWindow : Window
         for (var c = 0; c < def.Columns; c++)
         {
             var value = _activeTable!.Get(r, c);
-            var box = new TextBox
+            var text = new TextBlock
             {
                 Text = value.ToString("0.##", CultureInfo.InvariantCulture),
-                Width = 56,
-                MinHeight = 26,
-                Margin = new Avalonia.Thickness(1),
-                TextAlignment = TextAlignment.Center,
                 FontSize = 12,
                 Foreground = Brushes.Black,
-                Background = new SolidColorBrush(CellColor(value)),
-                Tag = (r, c),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
             };
-            box.LostFocus += OnCellCommit;
-            _cells[r, c] = box;
-            Grid.SetRow(box, r);
-            Grid.SetColumn(box, c);
-            _tableGrid.Children.Add(box);
+            var cell = new Border
+            {
+                MinWidth = 52,
+                MinHeight = 26,
+                Margin = new Avalonia.Thickness(1),
+                Padding = new Avalonia.Thickness(2),
+                CornerRadius = new CornerRadius(2),
+                Background = new SolidColorBrush(CellColor(value)),
+                BorderThickness = new Avalonia.Thickness(0),
+                Child = text,
+                Tag = new Cell(r, c),
+            };
+            cell.PointerPressed += OnCellPressed;
+            _cellBorders[r, c] = cell;
+            _cellTexts[r, c] = text;
+            Grid.SetRow(cell, r + 1);
+            Grid.SetColumn(cell, c + 1);
+            _tableGrid.Children.Add(cell);
         }
+
+        UpdateSelectionVisual();
     }
 
-    private void OnCellCommit(object? sender, RoutedEventArgs e)
+    private static string HeaderText(double[] axis, int i) =>
+        axis is { Length: > 0 } && i < axis.Length
+            ? axis[i].ToString("0.##", CultureInfo.InvariantCulture)
+            : i.ToString();
+
+    private void AddHeader(string text, int gridRow, int gridCol)
     {
-        if (sender is not TextBox box || box.Tag is not ValueTuple<int, int> pos || _activeTable is null) return;
-        if (!double.TryParse(box.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+        var header = new Border
         {
-            box.Text = _activeTable.Get(pos.Item1, pos.Item2).ToString("0.##", CultureInfo.InvariantCulture);
+            MinWidth = 44,
+            MinHeight = 22,
+            Padding = new Avalonia.Thickness(4, 2),
+            Child = new TextBlock
+            {
+                Text = text,
+                FontSize = 11,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = new SolidColorBrush(Color.Parse("#8a90a0")),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+        };
+        Grid.SetRow(header, gridRow);
+        Grid.SetColumn(header, gridCol);
+        _tableGrid.Children.Add(header);
+    }
+
+    private void OnCellPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Border { Tag: Cell cell }) return;
+
+        var extend = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (extend && _selection.Count > 0)
+        {
+            _selection.Clear();
+            int r0 = Math.Min(_anchor.Row, cell.Row), r1 = Math.Max(_anchor.Row, cell.Row);
+            int c0 = Math.Min(_anchor.Col, cell.Col), c1 = Math.Max(_anchor.Col, cell.Col);
+            for (var r = r0; r <= r1; r++)
+                for (var c = c0; c <= c1; c++)
+                    _selection.Add(new Cell(r, c));
+        }
+        else
+        {
+            _selection.Clear();
+            _selection.Add(cell);
+            _anchor = cell;
+        }
+        UpdateSelectionVisual();
+    }
+
+    private void UpdateSelectionVisual()
+    {
+        if (_cellBorders is null || _activeTable is null) return;
+        var accent = new SolidColorBrush(Color.Parse("#ffffff"));
+        for (var r = 0; r < _activeTable.Rows; r++)
+        for (var c = 0; c < _activeTable.Columns; c++)
+        {
+            var sel = _selection.Contains(new Cell(r, c));
+            _cellBorders[r, c].BorderBrush = sel ? accent : Brushes.Transparent;
+            _cellBorders[r, c].BorderThickness = new Avalonia.Thickness(sel ? 2 : 0);
+        }
+        _selInfo.Text = _selection.Count == 0 ? "" : $"{_selection.Count} cell(s) selected";
+    }
+
+    // ---------------- Tune: edit operations ----------------
+
+    private double Step => (double)(_stepBox.Value ?? 1m);
+
+    private void ApplyOp(Action<Table, List<Cell>> op)
+    {
+        if (_activeTable is null || _selection.Count == 0)
+        {
+            Log("Select one or more cells first (click, Shift+click for a range).");
             return;
         }
-        _activeTable.Set(pos.Item1, pos.Item2, v);
-        var stored = _activeTable.Get(pos.Item1, pos.Item2);
-        box.Text = stored.ToString("0.##", CultureInfo.InvariantCulture);
-        RecolorCells();
+        op(_activeTable, _selection.ToList());
+        RefreshCellValues();
+    }
+
+    private void OnAdjustPlus(object? s, RoutedEventArgs e) => ApplyOp((t, c) => TableOps.Adjust(t, c, Step));
+    private void OnAdjustMinus(object? s, RoutedEventArgs e) => ApplyOp((t, c) => TableOps.Adjust(t, c, -Step));
+    private void OnScalePlus(object? s, RoutedEventArgs e) => ApplyOp((t, c) => TableOps.Scale(t, c, Step));
+    private void OnScaleMinus(object? s, RoutedEventArgs e) => ApplyOp((t, c) => TableOps.Scale(t, c, -Step));
+    private void OnInterpH(object? s, RoutedEventArgs e) => ApplyOp(TableOps.InterpolateHorizontal);
+    private void OnInterpV(object? s, RoutedEventArgs e) => ApplyOp(TableOps.InterpolateVertical);
+    private void OnSmooth(object? s, RoutedEventArgs e) => ApplyOp(TableOps.Smooth);
+
+    private void OnSetValue(object? s, RoutedEventArgs e)
+    {
+        if (!double.TryParse(_setValueBox.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+        {
+            Log("Enter a numeric value to set.");
+            return;
+        }
+        ApplyOp((t, c) => TableOps.SetValue(t, c, v));
+    }
+
+    private void RefreshCellValues()
+    {
+        if (_cellTexts is null || _activeTable is null) return;
+        ComputeRange();
+        for (var r = 0; r < _activeTable.Rows; r++)
+        for (var c = 0; c < _activeTable.Columns; c++)
+        {
+            var v = _activeTable.Get(r, c);
+            _cellTexts[r, c].Text = v.ToString("0.##", CultureInfo.InvariantCulture);
+            _cellBorders![r, c].Background = new SolidColorBrush(CellColor(v));
+        }
+        UpdateSelectionVisual();
     }
 
     private void ComputeRange()
@@ -244,20 +376,7 @@ public partial class MainWindow : Window
         if (_tableMax <= _tableMin) _tableMax = _tableMin + 1;
     }
 
-    private Color CellColor(double value)
-    {
-        var frac = (value - _tableMin) / (_tableMax - _tableMin);
-        return Heatmap.Color(frac);
-    }
-
-    private void RecolorCells()
-    {
-        if (_cells is null || _activeTable is null) return;
-        ComputeRange();
-        for (var r = 0; r < _activeTable.Rows; r++)
-        for (var c = 0; c < _activeTable.Columns; c++)
-            _cells[r, c].Background = new SolidColorBrush(CellColor(_activeTable.Get(r, c)));
-    }
+    private Color CellColor(double value) => Heatmap.Color((value - _tableMin) / (_tableMax - _tableMin));
 
     // ---------------- Datalog ----------------
 
