@@ -67,10 +67,22 @@ src/
 - [x] Cross-platform serial hardware layer (Ostrich + HULOG)
 - [x] Managed device discovery (replaces `snake4hts32.dll`)
 - [x] Avalonia UI shell that scans + handshakes
-- [ ] Full live datalog gauges + logging to disk
-- [ ] ROM / map loading and real-time table editing
+- [x] Named datalog channels + CSV logging (original column order)
+- [x] ROM image + definition-driven table engine (load / read / write cells)
+- [ ] Live datalog gauges bound to the channel model
+- [ ] Full ECU datalog frame decode + validated channel scaling
+- [ ] Grid table editor UI + real-time push to the Ostrich
+- [ ] Verified P28 table definitions (addresses/scaling)
 - [ ] Wideband (Innovate MTS) input
 - [ ] Hardware-in-the-loop testing on a real P28 + Ostrich + HULOG
+
+## Tuning definitions
+
+Table locations live in external JSON definition files (see `defs/`, similar to
+a TunerPro XDF) rather than being hardcoded. `defs/p28.template.json` is a
+**placeholder with unverified addresses** — replace it with values validated
+against a known-good P28 definition before editing a live tune. Wrong
+fuel/ignition addresses or scaling produce dangerous maps.
 
 ## Licensing note
 

@@ -13,7 +13,14 @@
       <Button x:Name="ConnectOstrichButton" Content="Handshake Ostrich" Click="OnHandshakeOstrichClick" />
     </StackPanel>
 
-    <ListBox DockPanel.Dock="Top" x:Name="DeviceList" Height="140" Margin="0,0,0,12" />
+    <ListBox DockPanel.Dock="Top" x:Name="DeviceList" Height="110" Margin="0,0,0,12" />
+
+    <TextBlock DockPanel.Dock="Top" Text="ROM &amp; tables" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <Button x:Name="LoadRomButton" Content="Load ROM…" Click="OnLoadRomClick" />
+      <Button x:Name="LoadDefButton" Content="Load definition…" Click="OnLoadDefClick" />
+    </StackPanel>
+    <ListBox DockPanel.Dock="Top" x:Name="TableList" Height="90" Margin="0,0,0,12" />
 
     <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" Margin="0,0,0,4" />
     <ScrollViewer>
