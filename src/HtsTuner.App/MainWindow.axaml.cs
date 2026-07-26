@@ -509,14 +509,7 @@ public partial class MainWindow : Window
         {
             _logStatus.Text = $"Logging from {_selected.PortName}";
             var logger = new HulogDatalogger(_selected.PortName);
-            logger.SampleReceived += raw =>
-            {
-                var f = new DatalogFrame();
-                f[Sensor.Rpm] = raw.ChannelA;
-                f[Sensor.Map] = raw.ChannelB;
-                f[Sensor.Afr] = raw.ChannelC;
-                OnFrame(f);
-            };
+            logger.FrameReceived += OnFrame;
             _ = RunLoggerAsync(logger, _logCts.Token);
         }
         else

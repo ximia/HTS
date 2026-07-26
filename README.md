@@ -75,7 +75,8 @@ src/
 - [x] Undo/redo + copy/paste (Cmd+Z / Cmd+C / Cmd+V)
 - [x] Live gauge dashboard + demo mode (animates without hardware)
 - [x] Live scrolling datalog chart (RPM/MAP/AFR/TPS)
-- [ ] Full ECU datalog frame decode + validated channel scaling
+- [x] Real ECU datalog frame decode (64-byte frame reverse-engineered — see docs/DATALOG_PROTOCOL.md)
+- [ ] Capture-validate the remaining scale factors (RPM, TPS, AFR) on hardware
 - [ ] Real-time table push to the Ostrich while logging
 - [ ] Verified P28 table definitions (addresses/scaling)
 - [ ] Wideband (Innovate MTS) input
