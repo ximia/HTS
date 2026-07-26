@@ -69,9 +69,11 @@ src/
 - [x] Avalonia UI shell that scans + handshakes
 - [x] Named datalog channels + CSV logging (original column order)
 - [x] ROM image + definition-driven table engine (load / read / write cells)
-- [ ] Live datalog gauges bound to the channel model
+- [x] Dark, tabbed HTS-style UI (Connect / Tune / Datalog)
+- [x] Heatmap map-table editor (edit cells, live recolor, save ROM)
+- [x] Live gauge dashboard + demo mode (animates without hardware)
 - [ ] Full ECU datalog frame decode + validated channel scaling
-- [ ] Grid table editor UI + real-time push to the Ostrich
+- [ ] Real-time table push to the Ostrich while logging
 - [ ] Verified P28 table definitions (addresses/scaling)
 - [ ] Wideband (Innovate MTS) input
 - [ ] Hardware-in-the-loop testing on a real P28 + Ostrich + HULOG

@@ -1,31 +1,94 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="HtsTuner.App.MainWindow"
-        Width="640" Height="480"
-        Title="HTS Tuner (Mac-native) — P28 / OBD1 Honda">
-  <DockPanel Margin="16">
+        Width="1024" Height="720"
+        Background="#1c1f26"
+        Title="HTS Tuner — P28 / OBD1 Honda (Mac)">
 
-    <TextBlock DockPanel.Dock="Top" Text="Detected tuning hardware"
-               FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+  <DockPanel>
 
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-      <Button x:Name="ScanButton" Content="Scan for hardware" Click="OnScanClick" />
-      <Button x:Name="ConnectOstrichButton" Content="Handshake Ostrich" Click="OnHandshakeOstrichClick" />
-    </StackPanel>
+    <!-- Title bar strip -->
+    <Border DockPanel.Dock="Top" Background="#12141a" Padding="16,10">
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <TextBlock Text="HTS TUNER" FontSize="20" FontWeight="Bold" Foreground="#ff7a1a"
+                   VerticalAlignment="Center" />
+        <TextBlock Text="Snake Edition · macOS native" FontSize="12" Foreground="#8a90a0"
+                   VerticalAlignment="Center" />
+        <Border Background="#2a2f3a" CornerRadius="4" Padding="8,3" VerticalAlignment="Center">
+          <TextBlock x:Name="StatusChip" Text="Not connected" FontSize="12" Foreground="#c9cede" />
+        </Border>
+      </StackPanel>
+    </Border>
 
-    <ListBox DockPanel.Dock="Top" x:Name="DeviceList" Height="110" Margin="0,0,0,12" />
+    <!-- Status log strip at bottom -->
+    <Border DockPanel.Dock="Bottom" Background="#12141a" Padding="12,6" Height="90">
+      <ScrollViewer x:Name="LogScroller">
+        <TextBlock x:Name="LogBox" FontFamily="monospace" FontSize="11" Foreground="#9aa0b0" TextWrapping="Wrap" />
+      </ScrollViewer>
+    </Border>
 
-    <TextBlock DockPanel.Dock="Top" Text="ROM &amp; tables" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-      <Button x:Name="LoadRomButton" Content="Load ROM…" Click="OnLoadRomClick" />
-      <Button x:Name="LoadDefButton" Content="Load definition…" Click="OnLoadDefClick" />
-    </StackPanel>
-    <ListBox DockPanel.Dock="Top" x:Name="TableList" Height="90" Margin="0,0,0,12" />
+    <TabControl Margin="8">
 
-    <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" Margin="0,0,0,4" />
-    <ScrollViewer>
-      <TextBlock x:Name="LogBox" TextWrapping="Wrap" FontFamily="monospace" />
-    </ScrollViewer>
+      <!-- ================= CONNECT ================= -->
+      <TabItem Header="Connect">
+        <StackPanel Margin="16" Spacing="12">
+          <TextBlock Text="Hardware" FontSize="18" FontWeight="SemiBold" Foreground="#e8ebf2" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Name="ScanButton" Content="Scan for hardware" Click="OnScanClick" />
+            <Button x:Name="ConnectOstrichButton" Content="Handshake Ostrich" Click="OnHandshakeOstrichClick" />
+          </StackPanel>
+          <ListBox x:Name="DeviceList" Height="220" Background="#12141a" />
+          <TextBlock Text="Plug in the Moates Ostrich and HULOG, then Scan. Ports appear as /dev/cu.usbserial-*."
+                     Foreground="#8a90a0" FontSize="12" TextWrapping="Wrap" />
+        </StackPanel>
+      </TabItem>
 
+      <!-- ================= TUNE ================= -->
+      <TabItem Header="Tune">
+        <DockPanel Margin="12">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+            <Button x:Name="LoadRomButton" Content="Load ROM…" Click="OnLoadRomClick" />
+            <Button x:Name="LoadDefButton" Content="Load definition…" Click="OnLoadDefClick" />
+            <Button x:Name="SaveRomButton" Content="Save ROM…" Click="OnSaveRomClick" />
+          </StackPanel>
+
+          <Border DockPanel.Dock="Left" Width="240" Background="#12141a" CornerRadius="6" Padding="6" Margin="0,0,10,0">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="Tables" FontWeight="SemiBold" Foreground="#c9cede" Margin="4,4,4,8" />
+              <ListBox x:Name="TableList" Background="Transparent" SelectionChanged="OnTableSelected" />
+            </DockPanel>
+          </Border>
+
+          <Border Background="#12141a" CornerRadius="6" Padding="12">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" x:Name="TableTitle" Text="Select a table" FontWeight="SemiBold"
+                         Foreground="#e8ebf2" FontSize="15" Margin="0,0,0,4" />
+              <TextBlock DockPanel.Dock="Top" x:Name="TableHint"
+                         Text="Load a ROM and a definition, then pick a table."
+                         Foreground="#8a90a0" FontSize="12" Margin="0,0,0,10" />
+              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Grid x:Name="TableGrid" />
+              </ScrollViewer>
+            </DockPanel>
+          </Border>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ================= DATALOG ================= -->
+      <TabItem Header="Datalog">
+        <DockPanel Margin="12">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+            <Button x:Name="StartLogButton" Content="Start logging" Click="OnStartLogClick" />
+            <Button x:Name="StopLogButton" Content="Stop" Click="OnStopLogClick" IsEnabled="False" />
+            <CheckBox x:Name="DemoCheck" Content="Demo mode (no hardware)" IsChecked="True" Foreground="#c9cede" VerticalAlignment="Center" />
+            <TextBlock x:Name="LogStatus" Text="" Foreground="#8a90a0" VerticalAlignment="Center" />
+          </StackPanel>
+          <ScrollViewer>
+            <WrapPanel x:Name="GaugePanel" />
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+
+    </TabControl>
   </DockPanel>
 </Window>
