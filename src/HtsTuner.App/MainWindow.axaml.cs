@@ -35,9 +35,13 @@ public partial class MainWindow : Window
     private readonly HashSet<Cell> _selection = new();
     private Cell _anchor;
     private double _tableMin, _tableMax;
+    private readonly Stack<byte[]> _undo = new();
+    private readonly Stack<byte[]> _redo = new();
+    private double[,]? _clipboard;
 
     // Datalog tab
     private readonly Dictionary<Sensor, Gauge> _gauges = new();
+    private TimeSeriesChart _chart = null!;
     private CancellationTokenSource? _logCts;
     private CsvDatalogWriter? _csv;
 
@@ -75,7 +79,9 @@ public partial class MainWindow : Window
         _selInfo = this.FindControl<TextBlock>("SelInfo")!;
 
         _deviceList.SelectionChanged += (_, _) => _selected = _deviceList.SelectedItem as SerialDevice;
+        KeyDown += OnKeyDown;
 
+        BuildChart();
         BuildGauges();
         Log("Ready. Connect tab: scan hardware. Tune tab: load a ROM. Datalog tab: try Demo mode.");
     }
@@ -326,8 +332,78 @@ public partial class MainWindow : Window
             Log("Select one or more cells first (click, Shift+click for a range).");
             return;
         }
+        PushUndo();
         op(_activeTable, _selection.ToList());
         RefreshCellValues();
+    }
+
+    // ---------------- Tune: undo / redo / clipboard ----------------
+
+    private void PushUndo()
+    {
+        if (_rom is null) return;
+        _undo.Push(_rom.ToArray());
+        _redo.Clear();
+    }
+
+    private void OnUndo(object? s, RoutedEventArgs e)
+    {
+        if (_rom is null || _activeTable is null || _undo.Count == 0) { return; }
+        _redo.Push(_rom.ToArray());
+        _rom.CopyFrom(_undo.Pop());
+        RefreshCellValues();
+        Log("Undo.");
+    }
+
+    private void OnRedo(object? s, RoutedEventArgs e)
+    {
+        if (_rom is null || _activeTable is null || _redo.Count == 0) { return; }
+        _undo.Push(_rom.ToArray());
+        _rom.CopyFrom(_redo.Pop());
+        RefreshCellValues();
+        Log("Redo.");
+    }
+
+    private void OnCopy(object? s, RoutedEventArgs e)
+    {
+        if (_activeTable is null || _selection.Count == 0) { Log("Select cells to copy."); return; }
+        int r0 = _selection.Min(c => c.Row), r1 = _selection.Max(c => c.Row);
+        int c0 = _selection.Min(c => c.Col), c1 = _selection.Max(c => c.Col);
+        _clipboard = new double[r1 - r0 + 1, c1 - c0 + 1];
+        for (var r = r0; r <= r1; r++)
+            for (var c = c0; c <= c1; c++)
+                _clipboard[r - r0, c - c0] = _activeTable.Get(r, c);
+        Log($"Copied {_clipboard.GetLength(0)}×{_clipboard.GetLength(1)} block.");
+    }
+
+    private void OnPaste(object? s, RoutedEventArgs e)
+    {
+        if (_activeTable is null || _clipboard is null) { Log("Nothing to paste."); return; }
+        PushUndo();
+        int rows = _clipboard.GetLength(0), cols = _clipboard.GetLength(1);
+        for (var r = 0; r < rows; r++)
+        for (var c = 0; c < cols; c++)
+        {
+            int tr = _anchor.Row + r, tc = _anchor.Col + c;
+            if (tr < _activeTable.Rows && tc < _activeTable.Columns)
+                _activeTable.Set(tr, tc, _clipboard[r, c]);
+        }
+        RefreshCellValues();
+        Log("Pasted at anchor.");
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        var cmd = e.KeyModifiers.HasFlag(KeyModifiers.Meta) || e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        if (!cmd) return;
+        switch (e.Key)
+        {
+            case Key.Z when e.KeyModifiers.HasFlag(KeyModifiers.Shift): OnRedo(sender, new RoutedEventArgs()); e.Handled = true; break;
+            case Key.Z: OnUndo(sender, new RoutedEventArgs()); e.Handled = true; break;
+            case Key.Y: OnRedo(sender, new RoutedEventArgs()); e.Handled = true; break;
+            case Key.C: OnCopy(sender, new RoutedEventArgs()); e.Handled = true; break;
+            case Key.V: OnPaste(sender, new RoutedEventArgs()); e.Handled = true; break;
+        }
     }
 
     private void OnAdjustPlus(object? s, RoutedEventArgs e) => ApplyOp((t, c) => TableOps.Adjust(t, c, Step));
@@ -380,6 +456,16 @@ public partial class MainWindow : Window
 
     // ---------------- Datalog ----------------
 
+    private void BuildChart()
+    {
+        _chart = new TimeSeriesChart();
+        _chart.AddSeries(Sensor.Rpm, Color.Parse("#ff7a1a"), 0, 8000);
+        _chart.AddSeries(Sensor.Map, Color.Parse("#3aa0ff"), 0, 110);
+        _chart.AddSeries(Sensor.Afr, Color.Parse("#3ad07a"), 10, 18);
+        _chart.AddSeries(Sensor.Tps, Color.Parse("#d8c43a"), 0, 100);
+        this.FindControl<Border>("ChartHost")!.Child = _chart;
+    }
+
     private void BuildGauges()
     {
         AddGauge(Sensor.Rpm, "RPM", "rpm", 0, 8000);
@@ -407,6 +493,7 @@ public partial class MainWindow : Window
         _logCts = new CancellationTokenSource();
         _startLogButton.IsEnabled = false;
         _stopLogButton.IsEnabled = true;
+        _chart.Clear();
 
         try { _csv = CsvDatalogWriter.CreateTimestamped(DatalogDir()); Log($"Logging to {_csv.FilePath}"); }
         catch (Exception ex) { Log($"Could not open log file: {ex.Message}"); }
@@ -454,6 +541,7 @@ public partial class MainWindow : Window
             foreach (var (sensor, gauge) in _gauges)
                 if (frame.Has(sensor))
                     gauge.Update(frame[sensor]);
+            _chart.Push(frame);
         });
     }
 

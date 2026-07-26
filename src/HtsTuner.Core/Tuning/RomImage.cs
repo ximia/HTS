@@ -27,6 +27,14 @@ public sealed class RomImage
 
     public void Save(string path) => File.WriteAllBytes(path, _data);
 
+    /// <summary>Copies bytes into the existing buffer (used for undo/redo).</summary>
+    public void CopyFrom(byte[] snapshot)
+    {
+        if (snapshot.Length != _data.Length)
+            throw new ArgumentException("Snapshot size does not match ROM size.", nameof(snapshot));
+        Array.Copy(snapshot, _data, _data.Length);
+    }
+
     public byte GetByte(int offset) => _data[offset];
 
     public void SetByte(int offset, byte value) => _data[offset] = value;

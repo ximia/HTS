@@ -71,7 +71,10 @@ src/
 - [x] ROM image + definition-driven table engine (load / read / write cells)
 - [x] Dark, tabbed HTS-style UI (Connect / Tune / Datalog)
 - [x] Heatmap map-table editor (edit cells, live recolor, save ROM)
+- [x] Map editor tools: selection, axis headers, nudge/scale/set/interpolate/smooth
+- [x] Undo/redo + copy/paste (Cmd+Z / Cmd+C / Cmd+V)
 - [x] Live gauge dashboard + demo mode (animates without hardware)
+- [x] Live scrolling datalog chart (RPM/MAP/AFR/TPS)
 - [ ] Full ECU datalog frame decode + validated channel scaling
 - [ ] Real-time table push to the Ostrich while logging
 - [ ] Verified P28 table definitions (addresses/scaling)
